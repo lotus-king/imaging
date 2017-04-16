@@ -127,7 +127,7 @@ func EncodeWithQuality(w io.Writer, img image.Image, format Format, quality int)
 			}
 		}
 		if rgba != nil {
-			err = jpeg.Encode(w, rgba, &jpeg.Options{Quality: 95})
+			err = jpeg.Encode(w, rgba, &jpeg.Options{Quality: quality})
 		} else {
 			err = jpeg.Encode(w, img, &jpeg.Options{Quality: 95})
 		}
@@ -185,6 +185,42 @@ func SaveWithQuality(img image.Image, filename string, quality int) (err error) 
 	defer file.Close()
 
 	return EncodeWithQuality(file, img, f, quality)
+}
+
+// The format is determined from the filename extension: "jpg" (or "jpeg") are supported with quality option.
+// size :if you need pichure smaller then 200k input 200
+func SaveToSize(img image.Image, filename string, size int) (err error) {
+	needSize := size * 1024
+	saveQuality := 94
+	err = SaveWithQuality(img, filename, saveQuality)
+	if err != nil {
+		return err
+	}
+	s, err := os.Stat(filename)
+	if err != nil {
+		return err
+	}
+	fileSize := int(s.Size())
+	if fileSize < needSize {
+		return nil
+	}
+	for fileSize > needSize {
+		saveQuality = saveQuality / 2
+		if saveQuality <= 0 {
+			return errors.New("Quality so small can't fit u")
+		}
+		err := SaveWithQuality(img, filename, saveQuality)
+		if err != nil {
+			return err
+		}
+		s, err := os.Stat(filename)
+		if err != nil {
+			return err
+		}
+		fileSize = int(s.Size())
+
+	}
+	return nil
 }
 
 // New creates a new image with the specified width and height, and fills it with the specified color.
